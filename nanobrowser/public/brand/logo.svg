@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="50%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </radialGradient>
+    <linearGradient id="neonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#c084fc" />
+    </linearGradient>
+    <linearGradient id="needleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f43f5e" />
+      <stop offset="100%" stop-color="#fb7185" />
+    </linearGradient>
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.8" />
+      <stop offset="50%" stop-color="#6366f1" stop-opacity="0.5" />
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0.8" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background squircle -->
+  <rect x="24" y="24" width="464" height="464" rx="116" fill="url(#bgGlow)" stroke="url(#borderGrad)" stroke-width="8" />
+
+  <!-- Outer Ring of Q -->
+  <circle cx="248" cy="232" r="118" fill="none" stroke="url(#neonGrad)" stroke-width="32" stroke-linecap="round" filter="url(#glow)" />
+
+  <!-- Inner Compass Rose / Navigation Core -->
+  <!-- North needle -->
+  <polygon points="248,140 262,220 248,232" fill="url(#needleGrad)" />
+  <polygon points="248,140 234,220 248,232" fill="#be123c" />
+  <!-- South needle -->
+  <polygon points="248,324 262,244 248,232" fill="#94a3b8" />
+  <polygon points="248,324 234,244 248,232" fill="#cbd5e1" />
+  <!-- East needle -->
+  <polygon points="340,232 260,246 248,232" fill="#94a3b8" />
+  <polygon points="340,232 260,218 248,232" fill="#cbd5e1" />
+  <!-- West needle -->
+  <polygon points="156,232 236,246 248,232" fill="#94a3b8" />
+  <polygon points="156,232 236,218 248,232" fill="#cbd5e1" />
+  <!-- Center Pivot -->
+  <circle cx="248" cy="232" r="14" fill="#ffffff" filter="url(#glow)" />
+
+  <!-- Q Tail: Sleek Dynamic Navigation Arrow -->
+  <path d="M 334 318 L 416 400" fill="none" stroke="url(#neonGrad)" stroke-width="36" stroke-linecap="round" filter="url(#glow)" />
+  <path d="M 374 400 L 416 400 L 416 358" fill="none" stroke="url(#neonGrad)" stroke-width="32" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)" />
+</svg>

@@ -1,0 +1,17 @@
+{
+  "extName": {
+    "message": "NaviQ"
+  },
+  "extDescription": {
+    "message": "NaviQ - AI agent that works in your browser, in a side panel beside the page"
+  },
+  "actionTitle": {
+    "message": "Open NaviQ"
+  },
+  "commandOpenPanel": {
+    "message": "Open the NaviQ panel"
+  },
+  "menuAskAboutSelection": {
+    "message": "Ask NaviQ about this"
+  }
+}

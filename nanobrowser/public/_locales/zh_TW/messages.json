@@ -1,0 +1,17 @@
+{
+  "extName": {
+    "message": "NaviQ"
+  },
+  "extDescription": {
+    "message": "在你的瀏覽器中工作的 AI 代理，位於頁面旁的側邊欄中"
+  },
+  "actionTitle": {
+    "message": "開啟 NaviQ"
+  },
+  "commandOpenPanel": {
+    "message": "開啟 NaviQ 側邊欄"
+  },
+  "menuAskAboutSelection": {
+    "message": "向 NaviQ 詢問這段內容"
+  }
+}

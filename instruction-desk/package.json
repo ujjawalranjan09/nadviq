@@ -1,0 +1,19 @@
+{
+  "name": "naviq",
+  "version": "1.0.0",
+  "description": "NaviQ - AI Browser Assistant",
+  "private": true,
+  "type": "module",
+  "main": "main.mjs",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "@puppeteer/browsers": "^3.2.6",
+    "puppeteer-core": "^25.13.0",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}

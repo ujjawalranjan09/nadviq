@@ -1,0 +1,1211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;" />
+  <title>NaviQ - AI Browser Assistant</title>
+  <link rel="icon" type="image/png" href="assets/icon-32.png" />
+  <style>
+    :root {
+      --bg-canvas: #090d16;
+      --bg-sidebar: #0f1422;
+      --bg-surface: #141b2d;
+      --bg-surface-hover: #1c253d;
+      --bg-surface-elevated: #182035;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-focus: #6366f1;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --accent: #6366f1;
+      --accent-gradient: linear-gradient(135deg, #38bdf8 0%, #6366f1 50%, #c084fc 100%);
+      --accent-glow: rgba(99, 102, 241, 0.25);
+      --green: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.15);
+      --red: #f43f5e;
+      --red-glow: rgba(244, 63, 94, 0.15);
+      --amber: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.15);
+      --cyan: #38bdf8;
+      --cyan-glow: rgba(56, 189, 248, 0.2);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg-canvas); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; }
+
+    /* Layout structure */
+    .app-container { display: flex; width: 100vw; height: 100vh; position: relative; }
+
+    /* ---- Sidebar ---- */
+    .sidebar {
+      width: 270px;
+      min-width: 270px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 10;
+    }
+    .sidebar.collapsed { margin-left: -270px; }
+
+    .sidebar-header {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .brand-logo { width: 28px; height: 28px; border-radius: 8px; }
+    .brand-name { background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .icon-btn {
+      background: transparent;
+      border: 0;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .icon-btn:hover { background: var(--bg-surface-hover); color: var(--text-main); }
+    .icon-btn-danger:hover { background: var(--red-glow); color: #fb7185; }
+
+    .new-chat-wrapper { padding: 12px 14px 8px; }
+    .btn-new-chat {
+      width: 100%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+    .btn-new-chat:hover {
+      background: var(--bg-surface-hover);
+      border-color: rgba(99, 102, 241, 0.4);
+      box-shadow: 0 2px 8px var(--accent-glow);
+    }
+
+    .sidebar-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .sidebar-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      padding: 0 4px;
+    }
+    .sidebar-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-dim);
+    }
+
+    /* Tabs list */
+    .tab-list { display: flex; flex-direction: column; gap: 4px; }
+    .tab-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .tab-item:hover { background: var(--bg-surface-hover); color: var(--text-main); }
+    .tab-item.selected-target {
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.12);
+      color: #ffffff;
+      box-shadow: 0 0 10px var(--cyan-glow);
+    }
+    .tab-item .tab-dot { width: 6px; height: 6px; border-radius: 50%; background: #64748b; flex-shrink: 0; }
+    .tab-item.selected-target .tab-dot { background: #38bdf8; box-shadow: 0 0 6px #38bdf8; }
+    .tab-item .tab-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .tab-target-badge {
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: #38bdf8;
+      color: #090d16;
+      flex-shrink: 0;
+      text-transform: uppercase;
+    }
+    .empty-tabs-hint { font-size: 11.5px; color: var(--text-dim); padding: 4px; }
+
+    /* Recent chats history list */
+    .history-list { display: flex; flex-direction: column; gap: 4px; }
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+      group: history;
+    }
+    .history-item:hover { background: var(--bg-surface-hover); color: var(--text-main); }
+    .history-item.active { background: var(--bg-surface); color: var(--text-main); font-weight: 500; border-left: 2px solid var(--accent); }
+    .history-item-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .history-delete-btn {
+      opacity: 0;
+      background: transparent;
+      border: 0;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-size: 12px;
+      transition: all 0.15s ease;
+    }
+    .history-item:hover .history-delete-btn { opacity: 1; }
+    .history-delete-btn:hover { color: #fb7185; background: var(--red-glow); }
+    .empty-history-hint { font-size: 11.5px; color: var(--text-dim); padding: 4px; }
+
+    .sidebar-footer {
+      padding: 12px 14px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: rgba(10, 14, 24, 0.6);
+    }
+    .status-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 9999px;
+    }
+    .badge.connected { background: var(--green-glow); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge.disconnected { background: var(--red-glow); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .btn-launch-sm {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 4px 9px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-launch-sm:hover { background: var(--bg-surface-hover); border-color: rgba(99, 102, 241, 0.4); }
+
+    .btn-settings-trigger {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 12.5px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    .btn-settings-trigger:hover { background: var(--bg-surface); color: var(--text-main); }
+    .settings-left { display: flex; align-items: center; gap: 8px; overflow: hidden; }
+    .settings-model-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+
+    /* ---- Main Chat Canvas ---- */
+    .main-canvas {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+      background: var(--bg-canvas);
+    }
+
+    .top-bar {
+      height: 52px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(8px);
+    }
+    .top-bar-left { display: flex; align-items: center; gap: 10px; }
+    .model-selector-chip {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      padding: 5px 12px;
+      border-radius: 9999px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .model-selector-chip:hover {
+      background: var(--bg-surface-hover);
+      border-color: rgba(99, 102, 241, 0.4);
+    }
+
+    .top-bar-right { display: flex; align-items: center; gap: 8px; }
+
+    .chrome-profile-picker-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 3px 8px 3px 8px;
+      height: 32px;
+      transition: all 0.15s ease;
+    }
+    .chrome-profile-picker-wrapper:hover {
+      border-color: rgba(99, 102, 241, 0.4);
+      background: var(--bg-surface-hover);
+    }
+    .profile-picker-icon {
+      font-size: 13px;
+      opacity: 0.8;
+      display: flex;
+      align-items: center;
+    }
+    .chrome-profile-select {
+      background: transparent;
+      border: 0;
+      color: var(--text-main);
+      font-size: 12px;
+      font-weight: 500;
+      outline: none;
+      cursor: pointer;
+      max-width: 180px;
+    }
+    .chrome-profile-select option {
+      background: #161b22;
+      color: #e6edf3;
+    }
+
+    /* ---- Attachment Tray & Cards ---- */
+    .attachment-tray {
+      width: 100%;
+      max-width: 800px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+      padding: 0 4px;
+    }
+    .attachment-tray[hidden] { display: none; }
+    .attachment-card {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 4px 8px 4px 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-main);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      animation: fadeIn 0.15s ease;
+    }
+    .attachment-thumb {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: #000;
+      flex-shrink: 0;
+    }
+    .attachment-file-icon {
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: rgba(99, 102, 241, 0.15);
+      color: #818cf8;
+      flex-shrink: 0;
+    }
+    .attachment-info {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      max-width: 130px;
+    }
+    .attachment-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 500;
+      font-size: 11.5px;
+    }
+    .attachment-size {
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+    .attachment-del-btn {
+      background: transparent;
+      border: 0;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .attachment-del-btn:hover {
+      background: var(--red-glow);
+      color: #fb7185;
+    }
+
+    /* Chat scroll view */
+    .chat-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .chat-content-width { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 16px; }
+
+    /* Empty state hero */
+    .empty-hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 36px 12px 20px;
+      width: 100%;
+      max-width: 760px;
+      margin: auto;
+    }
+    .hero-badge {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      box-shadow: 0 8px 30px var(--accent-glow);
+      margin-bottom: 16px;
+    }
+    .hero-title {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+      background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      max-width: 480px;
+      line-height: 1.5;
+      margin-bottom: 32px;
+    }
+
+    .prompt-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      width: 100%;
+    }
+    .prompt-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 14px 16px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .prompt-card:hover {
+      background: var(--bg-surface-hover);
+      border-color: rgba(99, 102, 241, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    }
+    .prompt-icon { font-size: 20px; flex-shrink: 0; line-height: 1; padding-top: 2px; }
+    .prompt-title { font-size: 13.5px; font-weight: 600; color: var(--text-main); margin-bottom: 3px; }
+    .prompt-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+
+    /* Messages */
+    .msg-group { display: flex; flex-direction: column; width: 100%; gap: 10px; }
+    .msg-row { display: flex; width: 100%; gap: 12px; }
+    .msg-row.user { justify-content: flex-end; }
+    .msg-row.bot { justify-content: flex-start; }
+
+    .msg-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .msg-bubble {
+      max-width: 82%;
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .msg-row.user .msg-bubble {
+      background: #2563eb;
+      color: #ffffff;
+      border-bottom-right-radius: 4px;
+    }
+    .msg-row.bot .msg-bubble {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      border-bottom-left-radius: 4px;
+    }
+
+    /* Tool Call Accordion */
+    .tool-widget {
+      width: 100%;
+      background: rgba(20, 27, 45, 0.6);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 2px 0;
+    }
+    .tool-header {
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-size: 12.5px;
+      user-select: none;
+    }
+    .tool-header:hover { background: var(--bg-surface-hover); }
+    .tool-info { display: flex; align-items: center; gap: 8px; }
+    .tool-icon { font-size: 14px; }
+    .tool-name { font-weight: 600; color: #38bdf8; font-family: ui-monospace, monospace; }
+    .tool-status-pill {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+    .tool-status-pill.running { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+    .tool-status-pill.success { background: var(--green-glow); color: #34d399; }
+    .tool-status-pill.failed { background: var(--red-glow); color: #fb7185; }
+    .tool-body {
+      padding: 10px 12px;
+      border-top: 1px solid var(--border-subtle);
+      background: rgba(9, 13, 22, 0.4);
+      font-family: ui-monospace, monospace;
+      font-size: 11.5px;
+      color: var(--text-muted);
+      max-height: 180px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    .tool-body[hidden] { display: none; }
+
+    /* Toast notices */
+    .notice-pill {
+      align-self: center;
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #a5b4fc;
+      font-size: 12px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      max-width: 90%;
+      line-height: 1.4;
+      text-align: center;
+    }
+    .err-pill {
+      align-self: center;
+      background: var(--red-glow);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      color: #fda4af;
+      font-size: 12.5px;
+      padding: 8px 14px;
+      border-radius: 10px;
+      width: 100%;
+    }
+
+    /* Approval Prompt Card */
+    .prompt-box {
+      background: var(--bg-surface-elevated);
+      border: 1px solid #f59e0b;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 8px 24px var(--amber-glow);
+    }
+    .prompt-box[hidden] { display: none; }
+    .prompt-title { font-size: 14px; font-weight: 700; color: #fbbf24; }
+    .prompt-desc { font-size: 13px; color: var(--text-main); line-height: 1.5; }
+    .prompt-actions { display: flex; gap: 8px; }
+    .btn-allow {
+      background: #059669;
+      color: #ffffff;
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-allow:hover { background: #10b981; }
+    .btn-deny {
+      background: #dc2626;
+      color: #ffffff;
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-deny:hover { background: #ef4444; }
+
+    /* Bottom Input Dock */
+    .input-wrapper {
+      padding: 12px 20px 16px;
+      background: linear-gradient(180deg, transparent 0%, var(--bg-canvas) 20%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+    .input-dock {
+      width: 100%;
+      max-width: 800px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 18px;
+      padding: 12px 14px 10px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+      transition: all 0.2s ease;
+    }
+    .input-dock:focus-within {
+      border-color: rgba(99, 102, 241, 0.6);
+      box-shadow: 0 8px 32px var(--accent-glow);
+    }
+    .input-dock.drag-over {
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.08);
+      box-shadow: 0 0 20px var(--cyan-glow);
+    }
+    #input {
+      width: 100%;
+      background: transparent;
+      border: 0;
+      outline: 0;
+      color: var(--text-main);
+      font-size: 14.5px;
+      font-family: inherit;
+      line-height: 1.5;
+      resize: none;
+      max-height: 140px;
+      min-height: 28px;
+      padding: 2px 0;
+    }
+    #input::placeholder { color: var(--text-dim); }
+
+    .input-toolbar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-top: 4px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toolbar-pill-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      border-radius: 9999px;
+      padding: 5px 11px;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .toolbar-pill-btn:hover {
+      background: var(--bg-surface-hover);
+      color: var(--text-main);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+    .toolbar-pill-btn.target-tab {
+      color: #38bdf8;
+      border-color: rgba(56, 189, 248, 0.25);
+    }
+    .toolbar-pill-btn.target-tab:hover {
+      background: rgba(56, 189, 248, 0.12);
+      border-color: rgba(56, 189, 248, 0.45);
+    }
+    .toolbar-pill-btn .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 6px #38bdf8;
+    }
+    .toolbar-pill-btn.auto-approve.enabled {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.35);
+      color: #34d399;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.15);
+    }
+    .toolbar-pill-btn.auto-approve.enabled .pill-icon {
+      color: #10b981;
+      filter: drop-shadow(0 0 4px #10b981);
+    }
+    .toolbar-pill-btn.voice-btn.listening {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.6);
+      color: #f87171;
+      animation: pulseMic 1.2s infinite ease-in-out;
+    }
+    @keyframes pulseMic {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+      50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+    }
+
+    .msg-attachments {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .msg-attachment-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 3px 8px;
+      font-size: 11px;
+    }
+    .msg-attachment-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      object-fit: cover;
+    }
+
+    .send-btn-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #2563eb;
+      color: #ffffff;
+      border: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+    .send-btn-circle:hover { background: #3b82f6; transform: scale(1.04); }
+    .send-btn-circle:disabled { opacity: 0.35; cursor: default; transform: none; }
+    .send-btn-circle.pause-mode {
+      background: #f59e0b;
+      box-shadow: 0 0 14px rgba(245, 158, 11, 0.4);
+    }
+    .send-btn-circle.pause-mode:hover {
+      background: #d97706;
+      transform: scale(1.06);
+    }
+
+    .dock-caption {
+      font-size: 11.5px;
+      color: var(--text-dim);
+      margin-top: 8px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ---- Settings Modal ---- */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .modal-backdrop[hidden] { display: none; }
+    .modal-box {
+      width: 90%;
+      max-width: 540px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-title { font-size: 16px; font-weight: 700; color: var(--text-main); }
+    .modal-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+    .form-group input, .form-group select, .form-group textarea {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 13.5px;
+      color: var(--text-main);
+      font-family: inherit;
+      outline: 0;
+      transition: border-color 0.15s ease;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: var(--border-focus);
+    }
+    .form-group textarea {
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+      resize: vertical;
+      min-height: 80px;
+    }
+    .label-count-row { display: flex; align-items: center; justify-content: space-between; }
+    .badge-chip {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      background: var(--bg-surface-hover);
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+    }
+    .hint-card {
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12px;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+    .modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      background: rgba(10, 14, 24, 0.4);
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: #ffffff;
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 18px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-primary:hover { background: #3b82f6; }
+    .btn-secondary {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-secondary:hover { background: var(--bg-surface-hover); }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 1. Left Collapsible Sidebar -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <img src="assets/icon-32.png" alt="NaviQ" class="brand-logo" />
+          <span class="brand-name">NaviQ</span>
+        </div>
+        <button id="sidebarToggleBtn" class="icon-btn" title="Collapse sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="new-chat-wrapper">
+        <button id="newChatBtn" class="btn-new-chat">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>New Chat</span>
+        </button>
+      </div>
+
+      <div class="sidebar-scroll">
+        <!-- Target Chrome Tab Selection -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-header">
+            <span class="sidebar-section-title">Target Chrome Tab</span>
+            <span id="tabCountBadge" class="badge-chip">0 tabs</span>
+          </div>
+          <div id="tabBar" class="tab-list">
+            <div class="tab-item selected-target" data-tab-id="">
+              <span class="tab-dot"></span>
+              <span class="tab-title">Auto (Active Tab / Free)</span>
+              <span class="tab-target-badge">TARGET</span>
+            </div>
+            <div class="empty-tabs-hint">Launch Chrome to monitor tabs</div>
+          </div>
+        </div>
+
+        <!-- Chat History Management -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-header">
+            <span class="sidebar-section-title">Recent Chats</span>
+            <button id="clearHistoryBtn" class="icon-btn icon-btn-danger" title="Clear all chat history" style="padding: 2px 6px; font-size: 11px;">
+              Clear All
+            </button>
+          </div>
+          <div id="historyList" class="history-list"></div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="status-row">
+          <div id="statusBadge" class="badge disconnected">
+            <span class="status-dot"></span>
+            <span id="statusText">Disconnected</span>
+          </div>
+          <button id="launchBtn" class="btn-launch-sm" title="Launch Chrome with NaviQ">Launch Chrome</button>
+        </div>
+        <button id="settingsBtn" class="btn-settings-trigger" title="AI Provider & API Keys">
+          <div class="settings-left">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span id="activeModelLabel" class="settings-model-name">Gemini 2.5 Flash</span>
+          </div>
+          <span style="font-size: 11px; opacity: 0.7;">⚙</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 2. Main Workspace -->
+    <main class="main-canvas">
+      <!-- Top Bar -->
+      <header class="top-bar">
+        <div class="top-bar-left">
+          <button id="sidebarOpenBtn" class="icon-btn" title="Open sidebar" style="display: none;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <div id="modelPill" class="model-selector-chip" title="Click to change model or provider">
+            <span id="topModelDisplay">Gemini 2.5 Flash</span>
+            <span style="font-size: 10px; opacity: 0.6;">▾</span>
+          </div>
+        </div>
+        <div class="top-bar-right">
+          <div class="chrome-profile-picker-wrapper" title="Select Chrome profile to launch with">
+            <span class="profile-picker-icon">👤</span>
+            <select id="chromeProfileSelect" class="chrome-profile-select">
+              <option value="default-isolated">NaviQ Clean (Isolated)</option>
+            </select>
+          </div>
+          <button id="topLaunchBtn" class="btn-launch-sm" title="Launch Chrome with NaviQ">Launch Chrome</button>
+        </div>
+      </header>
+
+      <!-- Chat Scroll View -->
+      <div id="chatScrollArea" class="chat-scroll">
+        <div class="chat-content-width">
+          <!-- Empty State Hero -->
+          <div id="emptyHero" class="empty-hero">
+            <img src="assets/icon-128.png" alt="NaviQ" class="hero-badge" />
+            <h1 class="hero-title">How can NaviQ help you browse?</h1>
+            <p class="hero-subtitle">Control your local Chrome browser with natural language. Search, research, shop, and automate anything on the web.</p>
+
+            <div class="prompt-grid">
+              <div class="prompt-card" data-prompt="Search Amazon for the best-rated wireless noise-cancelling headphones and compare prices">
+                <span class="prompt-icon">🎧</span>
+                <div>
+                  <div class="prompt-title">Shop on Amazon</div>
+                  <div class="prompt-desc">Search and compare noise-cancelling headphones</div>
+                </div>
+              </div>
+              <div class="prompt-card" data-prompt="Go to Hacker News and list the top 5 trending tech articles with summaries">
+                <span class="prompt-icon">📰</span>
+                <div>
+                  <div class="prompt-title">Hacker News Digest</div>
+                  <div class="prompt-desc">Summarize top 5 trending tech stories</div>
+                </div>
+              </div>
+              <div class="prompt-card" data-prompt="Open GitHub trending repositories and find the top AI projects this week">
+                <span class="prompt-icon">⚡</span>
+                <div>
+                  <div class="prompt-title">GitHub Trending</div>
+                  <div class="prompt-desc">Find top trending AI repositories this week</div>
+                </div>
+              </div>
+              <div class="prompt-card" data-prompt="Navigate to Wikipedia and give me a 3-bullet summary of Quantum Computing">
+                <span class="prompt-icon">🔬</span>
+                <div>
+                  <div class="prompt-title">Research Wikipedia</div>
+                  <div class="prompt-desc">Quick 3-bullet summary of Quantum Computing</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Messages container -->
+          <div id="log" class="msg-group"></div>
+
+          <!-- Approval prompt card -->
+          <div id="promptCard" hidden class="prompt-box">
+            <div id="promptTitle" class="prompt-title">Action Approval Required</div>
+            <div id="promptContent" class="prompt-desc"></div>
+            <div id="promptActions" class="prompt-actions"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Floating Input Dock -->
+      <div class="input-wrapper">
+        <!-- Attachment Tray (Hidden when empty) -->
+        <div id="attachmentTray" class="attachment-tray" hidden></div>
+
+        <div id="inputDock" class="input-dock">
+          <textarea id="input" rows="1" placeholder="Message NaviQ to browse, search, or automate..."></textarea>
+
+          <div class="input-toolbar-row">
+            <div class="toolbar-left">
+              <!-- Upload / Attach Button -->
+              <input type="file" id="fileInput" multiple style="display: none;" />
+              <button id="attachBtn" class="toolbar-pill-btn" title="Upload image or file from computer">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                </svg>
+                <span>Attach</span>
+              </button>
+
+              <!-- Voice Command Button -->
+              <button id="micBtn" class="toolbar-pill-btn voice-btn" title="Voice command (Click to speak)">
+                <span class="mic-icon">🎙️</span>
+                <span id="micLabel">Voice</span>
+              </button>
+
+              <!-- Target Tab Pill -->
+              <button id="bottomTargetTabBtn" class="toolbar-pill-btn target-tab" title="Target Chrome Tab: Click to toggle or reset to Auto Tab">
+                <span id="bottomTargetTabDot" class="pill-dot"></span>
+                <span id="bottomTargetTabLabel">Auto Tab</span>
+              </button>
+
+              <!-- Auto-Approve Pill -->
+              <button id="bottomAutoApproveBtn" class="toolbar-pill-btn auto-approve" title="Toggle Auto-Approve Mode: Automatically allow actions without prompt">
+                <span class="pill-icon">⚡</span>
+                <span id="bottomAutoApproveLabel">Auto-Approve: OFF</span>
+              </button>
+            </div>
+
+            <div class="toolbar-right">
+              <button id="send" class="send-btn-circle" title="Send message">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="19" x2="12" y2="5"></line>
+                  <polyline points="5 12 12 5 19 12"></polyline>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="dock-caption">
+          NaviQ controls Chrome via MV3 extension. Drop files or click Attach to upload.
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 3. Settings Modal Overlay -->
+  <div id="settingsModal" class="modal-backdrop" hidden>
+    <div class="modal-box">
+      <div class="modal-header">
+        <span class="modal-title">NaviQ Settings</span>
+        <button id="modalCloseBtn" class="icon-btn" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="provider">AI Provider</label>
+          <select id="provider">
+            <option value="gemini">Google AI Studio (Gemini 3.1 & 3.5 Flash Lite)</option>
+            <option value="openrouter">OpenRouter (Free & Paid)</option>
+            <option value="openai">OpenAI</option>
+            <option value="local">Local (Ollama / LM Studio)</option>
+            <option value="custom">Custom Endpoint</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="baseUrl">Base URL</label>
+          <input id="baseUrl" placeholder="https://generativelanguage.googleapis.com/v1beta/openai" />
+        </div>
+        <div class="form-group">
+          <label for="model">Primary Model Name</label>
+          <input id="model" placeholder="gemini-3.1-flash-lite" />
+        </div>
+        <div class="form-group">
+          <div class="label-count-row">
+            <label for="fallbackModel">Fallback Model (Quota Optimization)</label>
+            <span class="badge-chip">Separate 15 RPM Quota</span>
+          </div>
+          <input id="fallbackModel" placeholder="gemini-3.5-flash-lite" />
+          <div class="hint-card">
+            ⚡ <strong>Smart 15 RPM Dual-Model Quota:</strong> On Google AI Studio, both gemini-3.1-flash-lite and gemini-3.5-flash-lite enjoy 15 RPM / 500 RPD quotas. If one reaches its limit, NaviQ rotates to the other model, and across all your API keys.
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="label-count-row">
+            <label for="modalChromeProfileSelect">Chrome Profile to Open</label>
+            <span id="profileStatusBadge" class="badge-chip">Persistent Profile</span>
+          </div>
+          <select id="modalChromeProfileSelect">
+            <option value="default-isolated">NaviQ Clean Browser (Isolated)</option>
+          </select>
+          <div class="hint-card">
+            👤 <strong>Persistent Chrome Profile:</strong> Choose which Chrome profile to open with (e.g. your personal profile, college account, or isolated). All logins, bookmarks, and cookies persist across app restarts without colliding with your active Chrome.
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="label-count-row">
+            <label for="apiKeys">API Keys (Auto-Rotated on Rate Limits)</label>
+            <span id="keysCountChip" class="badge-chip">0 keys</span>
+          </div>
+          <textarea id="apiKeys" spellcheck="false" placeholder="Paste one or more API keys (one per line)&#10;sk-or-v1-…&#10;AIzaSy…"></textarea>
+          <div class="hint-card">
+            💡 <strong>Tip:</strong> Paste multiple free Google AI Studio keys. Combined with dual-model failover, 3 keys provide up to 90 RPM total throughput!
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="label-count-row">
+            <label for="autoApproveSetting" style="cursor: pointer;">Auto-Approve Actions</label>
+            <input type="checkbox" id="autoApproveSetting" style="width: 16px; height: 16px; cursor: pointer; accent-color: #10b981;" />
+          </div>
+          <div class="hint-card">
+            ⚡ <strong>Hands-Free Automation:</strong> Automatically approves website clicks, form inputs, and navigations without pausing for confirmation prompts.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="modalCancelBtn" class="btn-secondary">Cancel</button>
+        <button id="save" class="btn-primary">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
